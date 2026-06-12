@@ -1,0 +1,36 @@
+tcsh: guard xcatgets() against a failed catalog descriptor (musl)
+
+POSIX requires catgets() to return the supplied default string `s` when
+called with an invalid catalog descriptor.  glibc and the BSDs honour this;
+musl's catgets() does NOT -- it dereferences (const char *)catd unconditionally
+(reading catd+4, i.e. address 0x3 when catd == (nl_catd)-1), so it segfaults.
+
+tcsh always calls xcatgets()/CGETS() with whatever catopen() returned, and in a
+single self-contained static binary there are no `tcsh.cat` files on disk, so
+catopen() returns -1 at startup (nlsinit -> iconv_open(nl_langinfo(CODESET),
+xcatgets(catd,255,1,"UTF-8"))) and the shell dies before it prints anything.
+
+xcatgets() is the single chokepoint for every catalog lookup (iconv_catgets()
+and the CGETS() macro both route through it), so guarding it here makes the
+shell robust on musl while leaving real localization intact wherever the
+platform's catgets() is conformant and a valid catalog was opened.
+
+--- a/sh.func.c
++++ b/sh.func.c
+@@ -2585,6 +2585,16 @@
+ {
+     char *res;
+
++    /*
++     * POSIX: catgets() with an invalid catalog descriptor returns the default
++     * string `s`.  musl omits that check and dereferences (char *)-1, so a
++     * static-musl build segfaults the moment catopen() fails -- which it does
++     * in a single binary with no .cat files on disk.  Bail to the built-in
++     * (English) default before touching catgets().
++     */
++    if (ctd == (nl_catd)-1)
++	return (char *)(intptr_t)s;
++
+     errno = 0;
+     while ((res = catgets(ctd, set_id, msg_id, s)) == s && errno == EINTR) {
+ 	handle_pending_signals();
