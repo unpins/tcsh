@@ -80,9 +80,8 @@ The [Releases](https://github.com/unpins/tcsh/releases) page has standalone bina
   confirms — ncurses and everything else is static).
 
 - **Windows via Cosmopolitan.** mingw can't host tcsh (no `fork`, job control,
-  or POSIX signals), so the Windows binary is built with `cosmocc` and apelinked
-  to a PE32+ `.exe`. Two cosmo-specific build fixes: `_POSIX_VDISABLE` is pinned
-  to a
-  compile-time constant (cosmo exposes it as a runtime `extern const`, but tcsh
-  seeds a file-scope array with it), and the shadow-password `lock` path is
-  switched to plain `crypt` (Windows has no `/etc/shadow`). See `cosmo.nix`.
+  or POSIX signals), so the Windows binary goes through cosmo. Two cosmo-
+  specific build fixes: `_POSIX_VDISABLE` is pinned to a compile-time constant
+  (cosmo exposes it as a runtime `extern const`, but tcsh seeds a file-scope
+  array with it), and the shadow-password `lock` path is switched to plain
+  `crypt` (Windows has no `/etc/shadow`). See `cosmo.nix`.
