@@ -1,0 +1,100 @@
+--- a/sh.exec.c
++++ b/sh.exec.c
+@@ -345,6 +345,32 @@
+     stderror(ERR_NAME | ERR_COMMAND);
+ }
+
++#ifdef __COSMOCC__
++/*
++ * On Cosmopolitan/Windows hosts an installed program is named "foo.exe", but
++ * users (and scripts) type the bare "foo".  When the path tcsh is about to
++ * exec does not already end in ".exe", return a freshly-allocated copy with
++ * ".exe" appended so the caller can retry the exec; otherwise return NULL.
++ * The result must be released with xfree().  Uses only tcsh Char helpers.
++ */
++static Char STRdotexe[] = { '.', 'e', 'x', 'e', '\0' };
++
++static Char *
++dotexe_variant(Char *sf)
++{
++    size_t l = Strlen(sf);
++
++    /* already ".exe" (case-insensitive) -> no retry */
++    if (l >= 4 &&
++	sf[l - 4] == '.' &&
++	(sf[l - 3] == 'e' || sf[l - 3] == 'E') &&
++	(sf[l - 2] == 'x' || sf[l - 2] == 'X') &&
++	(sf[l - 1] == 'e' || sf[l - 1] == 'E'))
++	return NULL;
++    return Strspl(sf, STRdotexe);
++}
++#endif /* __COSMOCC__ */
++
+ /*
+  * Execute command f, arg list t.
+  * Record error message if not found.
+@@ -390,6 +416,27 @@
+ 	__setostype(1);		/* "1" is "__OS_POSIX" in <sys/user.h> */
+ #endif /* ISC_POSIX_EXEC_BUG */
+     }
++#ifdef __COSMOCC__
++    /*
++     * The bare candidate was not found; on Cosmopolitan/Windows retry once
++     * with ".exe" appended so "ls" resolves "ls.exe" (mirrors PATHEXT).  The
++     * spliced ".exe" path is what reaches execv, so a successful exec runs and
++     * keeps that path; on failure errno is restored and the normal flow below
++     * proceeds (the doexec() loop tries the next $path element).
++     */
++    if (errno == ENOENT) {
++	Char *xsf = dotexe_variant(sf);
++
++	if (xsf != NULL) {
++	    char *xf = short2str(xsf);
++	    int   saverr = errno;
++
++	    (void) execv(xf, t);	/* returns only on failure */
++	    errno = saverr;
++	    xfree(xsf);
++	}
++    }
++#endif /* __COSMOCC__ */
+ #ifdef VFORK
+     Vt = 0;
+ #endif /* VFORK */
+@@ -1003,7 +1050,35 @@
+     sp->word = cmd = globone(sp->word, G_IGNORE);
+     cleanup_push(cmd, xfree);
+
+-    if ((i = iscommand(sp->word)) != 0) {
++    i = iscommand(sp->word);
++#ifdef __COSMOCC__
++    /*
++     * On Cosmopolitan/Windows the installed program is "ls.exe" but the user
++     * asks about "ls"; iscommand() walks $path with executable() and only
++     * tests the bare name, so it reports "Command not found".  Mirror texec()'s
++     * exec-time retry here: when the bare lookup fails, retry once with ".exe"
++     * appended.  If that resolves, adopt the ".exe" name as sp->word so the
++     * success branch below splices "<dir>/ls.exe" and reports/returns it.  The
++     * original cmd stays registered for cleanup; the new name is registered too.
++     */
++    if (i == 0) {
++	Char *xcmd = dotexe_variant(sp->word);
++
++	if (xcmd != NULL) {
++	    int xi = iscommand(xcmd);
++
++	    if (xi != 0) {
++		sp->word = cmd = xcmd;
++		cleanup_push(cmd, xfree);
++		i = xi;
++	    }
++	    else
++		xfree(xcmd);
++	}
++    }
++#endif /* __COSMOCC__ */
++
++    if (i != 0) {
+ 	Char **pv;
+ 	struct varent *v;
+ 	int    slash = any(short2str(sp->word), '/');

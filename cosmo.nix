@@ -34,6 +34,15 @@ cosmoPkgs.tcsh.overrideAttrs (oa: {
 # undef _POSIX_VDISABLE
 # define _POSIX_VDISABLE 0
 #endif'
+
+    # Windows command lookup: catalog programs install as `<name>.exe` hardlinks
+    # (cmd.exe/PowerShell find them via PATHEXT), but Cosmopolitan does not append
+    # an executable suffix during path resolution, so a bare `ls` typed at the
+    # tcsh prompt never resolves. The patch teaches tcsh's exec chokepoint (texec)
+    # to retry with `.exe` when the bare candidate fails ENOENT — mirroring native
+    # Windows shells and keeping a single on-disk name (no `ls` + `ls.exe` pair).
+    # `__COSMOCC__`-guarded, inert on the Linux/macOS static builds.
+    patch -p1 < ${./findcmd-exe-lookup.patch}
   '';
 
   # cosmo ships <shadow.h> but not the getspnam() symbol, so configure sets
