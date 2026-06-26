@@ -50,6 +50,12 @@
     unpins-lib.lib.mkStandaloneFlake {
       inherit self;
       name = "tcsh";
+
+      # Build via the unpin-llvm engine + emit a bitcode multicall module.
+      engine = "unpin-llvm";
+      multicall = {
+        programs = [{ name = "tcsh"; }];
+      };
       license = "BSD-2-Clause";
 
       # tcsh has --version; also exercise the interpreter to confirm argv
