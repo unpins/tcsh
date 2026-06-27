@@ -21,10 +21,11 @@
   #     (char *)-1 and crashes. The patch guards tcsh's single catgets chokepoint
   #     (xcatgets) — robust on musl, real localization preserved where the
   #     platform's catgets is conformant.
-  #   - embedFallbackTerminfo on ncurses: tcsh's command-line editor looks up
-  #     terminal capabilities via terminfo; without baked fallbacks the binary
-  #     reads host /usr/share/terminfo (and keeps a /nix/store ref to it). Same
-  #     fix dash/nano use.
+  #   - ncurses fallback-terminfo (tcsh's command-line editor looks up terminal
+  #     capabilities via terminfo; baked fallbacks avoid reading host
+  #     /usr/share/terminfo and a /nix/store ref) is now applied centrally to
+  #     every engine ncurses in native-overlay/ncurses.nix — no per-package
+  #     override (same for dash/nano).
   #
   # Messages are English on all targets: tcsh ships its catalogs in glibc/gencat
   # format, which musl's catgets cannot read (wrong magic) even when present, and
@@ -38,12 +39,11 @@
   #     (needs fork/job-control/signals), cosmocc backs them.
   outputs = { self, unpins-lib }:
     let
+      # Fallback terminfo is baked centrally for every engine ncurses, linux +
+      # darwin (native-overlay/ncurses.nix), so p.ncurses already carries it.
       tcshBase = pkgs:
-        let
-          p = pkgs.pkgsStatic;
-          ncursesFB = unpins-lib.lib.embedFallbackTerminfo p.ncurses;
-        in
-        (p.tcsh.override { ncurses = ncursesFB; }).overrideAttrs (o: {
+        let p = pkgs.pkgsStatic;
+        in (p.tcsh.override { ncurses = p.ncurses; }).overrideAttrs (o: {
           patches = (o.patches or [ ]) ++ [ ./musl-catgets-guard.patch ];
         });
     in
