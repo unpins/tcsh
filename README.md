@@ -85,3 +85,8 @@ The [Releases](https://github.com/unpins/tcsh/releases) page has standalone bina
   (cosmo exposes it as a runtime `extern const`, but tcsh seeds a file-scope
   array with it), and the shadow-password `lock` path is switched to plain
   `crypt` (Windows has no `/etc/shadow`). See `cosmo.nix`.
+
+- **Tests.** tcsh's autotest suite isn't wired: its harness regenerates itself
+  with `autom4te` (autoconf) and expects a pty/`expect` environment, neither
+  available in the static-musl build sandbox. The release smoke test exercises
+  the interpreter and the builtin `echo`.

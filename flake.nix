@@ -35,7 +35,7 @@
   # Targets:
   #   - Linux (static-musl, every arch).
   #   - macOS (Mach-O, libSystem-only).
-  #   - Windows (Cosmopolitan APE): see cosmo.nix — mingw is a dead end for tcsh
+  #   - Windows (single PE .exe, built via Cosmopolitan): see cosmo.nix — mingw is a dead end for tcsh
   #     (needs fork/job-control/signals), cosmocc backs them.
   outputs = { self, unpins-lib }:
     let
@@ -45,6 +45,10 @@
         let p = pkgs.pkgsStatic;
         in (p.tcsh.override { ncurses = p.ncurses; }).overrideAttrs (o: {
           patches = (o.patches or [ ]) ++ [ ./musl-catgets-guard.patch ];
+          # Don't wire the native suite: tcsh's autotest harness regenerates
+          # itself with autom4te (autoconf) and expects a pty/expect environment,
+          # neither present in the static-musl build sandbox.
+          doCheck = false;
         });
     in
     unpins-lib.lib.mkStandaloneFlake {
@@ -59,7 +63,7 @@
       license = "BSD-2-Clause";
 
       # tcsh has --version; also exercise the interpreter to confirm argv
-      # parsing and the builtin echo on every ABI (incl. the cosmo APE).
+      # parsing and the builtin echo on every ABI (incl. the cosmo PE).
       smoke = [ "-f" "-c" "echo unpins-smoke-ok" ];
       smokePattern = "unpins-smoke-ok";
 
