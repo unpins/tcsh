@@ -13,6 +13,8 @@
 pkgs:
 let
   cosmoPkgs = unpins-lib.lib.cosmoStaticCross pkgs;
+  # Literal fora da string '': dentro dela o `${` teria de ser escapado.
+  bakedShell = "\${bindir}/tcsh";
 in
 cosmoPkgs.tcsh.overrideAttrs (oa: {
   patches = (oa.patches or [ ]) ++ [ ./musl-catgets-guard.patch ];
@@ -27,6 +29,13 @@ cosmoPkgs.tcsh.overrideAttrs (oa: {
   # ttychars against _POSIX_VDISABLE) still matches. Same shape as zsh's
   # RLIM_NLIMITS pin.
   postPatch = (oa.postPatch or "") + ''
+    # Same as the native build: tcsh's Makefile bakes _PATH_TCSHELL from
+    # bindir, i.e. our own store path, as the default `$shell`. Point it at
+    # the conventional location instead so the .exe carries no store
+    # reference. See flake.nix for the full reasoning.
+    substituteInPlace Makefile.in \
+      --replace-fail '${bakedShell}' '/bin/tcsh'
+
     substituteInPlace ed.init.c \
       --replace '#include "ed.defns.h"' \
                 '#include "ed.defns.h"

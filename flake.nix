@@ -39,12 +39,25 @@
   #     (needs fork/job-control/signals), cosmocc backs them.
   outputs = { self, unpins-lib }:
     let
+      # Literal aqui fora: dentro de uma string '' o `${` teria de ser escapado.
+      bakedShell = "\${bindir}/tcsh";
       # Fallback terminfo is baked centrally for every engine ncurses, linux +
       # darwin (native-overlay/ncurses.nix), so p.ncurses already carries it.
       tcshBase = pkgs:
         let p = pkgs.pkgsStatic;
         in (p.tcsh.override { ncurses = p.ncurses; }).overrideAttrs (o: {
           patches = (o.patches or [ ]) ++ [ ./musl-catgets-guard.patch ];
+          # tcsh's Makefile bakes -D_PATH_TCSHELL='"${bindir}/tcsh"', i.e. our
+          # own store path, and that is the default value of the `$shell`
+          # variable -- the interpreter tcsh execs for a script with no `#!`.
+          # The path exists nowhere on a user's machine, and Nix counted it as
+          # a runtime reference, dragging the base build behind a
+          # self-contained binary. /bin/tcsh is upstream's own Linux default
+          # (pathnames.h) and where every distro puts it.
+          postPatch = (o.postPatch or "") + ''
+            substituteInPlace Makefile.in \
+              --replace-fail '${bakedShell}' '/bin/tcsh'
+          '';
           # Don't wire the native suite: tcsh's autotest harness regenerates
           # itself with autom4te (autoconf) and expects a pty/expect environment,
           # neither present in the static-musl build sandbox.
