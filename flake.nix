@@ -39,7 +39,7 @@
   #     (needs fork/job-control/signals), cosmocc backs them.
   outputs = { self, unpins-lib }:
     let
-      # Literal aqui fora: dentro de uma string '' o `${` teria de ser escapado.
+      # Literal out here: inside an '' string the `${` would need escaping.
       bakedShell = "\${bindir}/tcsh";
       # Fallback terminfo is baked centrally for every engine ncurses, linux +
       # darwin (native-overlay/ncurses.nix), so p.ncurses already carries it.
