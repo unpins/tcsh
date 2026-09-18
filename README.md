@@ -63,15 +63,9 @@ The [Releases](https://github.com/unpins/tcsh/releases) page has standalone bina
   files — so the shell is already self-contained and needs no embedded
   filesystem.
 
-- **NLS crash fix (musl).** A static build of `pkgsStatic.tcsh` segfaults at
-  startup on *every* invocation: `nlsinit()` calls `catopen("tcsh")`, which
-  fails when there are no `.cat` files on disk, and then passes the resulting
-  `(nl_catd)-1` to `catgets()`. POSIX (and glibc/the BSDs) make `catgets()`
-  return the default string for a bad descriptor; musl instead dereferences
-  `(char *)-1` and crashes. `musl-catgets-guard.patch` guards tcsh's single
-  catgets chokepoint (`xcatgets`), making the shell robust on musl while leaving
-  real localization intact wherever the platform's `catgets()` is conformant.
-  Messages are English on all targets (no catalogs are shipped on disk).
+- **Startup crash fixed.** Unpatched, the shell segfaulted at startup on
+  *every* invocation when no message catalogs are on disk; this build fixes
+  that. Messages are English on all targets (no catalogs are shipped on disk).
 
 - **Static linking, every target.** Linux is static-musl (every arch); the
   binary carries a curated ncurses terminfo fallback so the command-line editor
@@ -80,13 +74,10 @@ The [Releases](https://github.com/unpins/tcsh/releases) page has standalone bina
   confirms — ncurses and everything else is static).
 
 - **Windows via Cosmopolitan.** mingw can't host tcsh (no `fork`, job control,
-  or POSIX signals), so the Windows binary goes through cosmo. Two cosmo-
-  specific build fixes: `_POSIX_VDISABLE` is pinned to a compile-time constant
-  (cosmo exposes it as a runtime `extern const`, but tcsh seeds a file-scope
-  array with it), and the shadow-password `lock` path is switched to plain
-  `crypt` (Windows has no `/etc/shadow`). See `cosmo.nix`.
+  or POSIX signals), so the Windows binary goes through cosmo. There the `lock`
+  builtin checks the password with plain `crypt` (Windows has no `/etc/shadow`).
 
 - **Tests.** tcsh's autotest suite isn't wired: its harness regenerates itself
   with `autom4te` (autoconf) and expects a pty/`expect` environment, neither
-  available in the static-musl build sandbox. The release smoke test exercises
+  available in the build sandbox. The release smoke test exercises
   the interpreter and the builtin `echo`.
