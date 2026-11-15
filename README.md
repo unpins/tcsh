@@ -67,17 +67,15 @@ The [Releases](https://github.com/unpins/tcsh/releases) page has standalone bina
   *every* invocation when no message catalogs are on disk; this build fixes
   that. Messages are English on all targets (no catalogs are shipped on disk).
 
-- **Static linking, every target.** Linux is static-musl (every arch); the
-  binary carries a curated ncurses terminfo fallback so the command-line editor
-  works with no `/usr/share/terminfo` on the host (`strace` shows zero
-  `/nix/store` reads at runtime). macOS links only `libSystem` (`otool -L`
-  confirms — ncurses and everything else is static).
+- **Terminal database built in.** The command-line editor works with no
+  `/usr/share/terminfo` on the host: a curated set of terminal descriptions is
+  inside the binary.
 
 - **Windows via Cosmopolitan.** mingw can't host tcsh (no `fork`, job control,
   or POSIX signals), so the Windows binary goes through cosmo. There the `lock`
   builtin checks the password with plain `crypt` (Windows has no `/etc/shadow`).
 
-- **Tests.** tcsh's autotest suite isn't wired: its harness regenerates itself
-  with `autom4te` (autoconf) and expects a pty/`expect` environment, neither
-  available in the build sandbox. The release smoke test exercises
-  the interpreter and the builtin `echo`.
+- **Tests:** tcsh's test suite runs on native builds (0 failures under
+  static-musl) and is skipped on cross targets the build host can't execute.
+  Two tests that make a file setuid, which the build sandbox forbids, are left
+  out.

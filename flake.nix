@@ -11,7 +11,7 @@
   # tcsh (the enhanced Berkeley C shell) as a single self-contained static
   # binary. Unlike zsh it has no module system and no autoloaded function tree
   # — completions are runtime `complete` builtins, not files — so the shell is
-  # already self-contained with no VFS. Two deltas vs nixpkgs pkgsStatic.tcsh:
+  # already self-contained with no VFS. Deltas vs nixpkgs pkgsStatic.tcsh:
   #
   #   - musl-catgets-guard.patch: pkgsStatic.tcsh segfaults at startup on EVERY
   #     invocation. tcsh's nlsinit() calls catopen("tcsh"), which fails in a
@@ -21,11 +21,10 @@
   #     (char *)-1 and crashes. The patch guards tcsh's single catgets chokepoint
   #     (xcatgets) — robust on musl, real localization preserved where the
   #     platform's catgets is conformant.
-  #   - ncurses fallback-terminfo (tcsh's command-line editor looks up terminal
-  #     capabilities via terminfo; baked fallbacks avoid reading host
-  #     /usr/share/terminfo and a /nix/store ref) is now applied centrally to
-  #     every engine ncurses in native-overlay/ncurses.nix — no per-package
-  #     override (same for dash/nano).
+  #   - shell-path-bin-tcsh.patch: `$shell` defaults to /bin/tcsh, not the
+  #     build's store path (the patch header has the why).
+  #   - The terminfo fallback comes from the central ncurses
+  #     (native-overlay/ncurses.nix).
   #
   # Messages are English on all targets: tcsh ships its catalogs in glibc/gencat
   # format, which musl's catgets cannot read (wrong magic) even when present, and
