@@ -1,0 +1,150 @@
+--- a/tests/commands.at
++++ b/tests/commands.at
+@@ -198,30 +198,30 @@
+ AT_KEYWORDS([commands])
+ 
+ AT_DATA([cd.csh],
+-[[set current=`/bin/pwd`
++[[set current=`pwd`
+ set home=$current
+ mkdir -p a
+ echo ---
+ cd a
+-/bin/pwd | sed "s,$current,,"
++pwd | sed "s,$current,,"
+ echo ---
+ cd
+-/bin/pwd | sed "s,$current,,"
++pwd | sed "s,$current,,"
+ echo ---
+ cd "$current/a"
+-/bin/pwd | sed "s,$current,,"
++pwd | sed "s,$current,,"
+ echo ---
+ cd -
+-/bin/pwd | sed "s,$current,,"
++pwd | sed "s,$current,,"
+ echo ---
+ cd a
+ set cdpath=($current)
+ echo ---
+ cd a
+-/bin/pwd | sed "s,$current,,"
++pwd | sed "s,$current,,"
+ echo ---
+ cd current
+-/bin/pwd | sed "s,$current,,"
++pwd | sed "s,$current,,"
+ echo ---
+ cd -p | sed "s,$current,,"
+ echo ---
+@@ -345,7 +345,7 @@
+ AT_KEYWORDS([commands])
+ 
+ AT_DATA([dirs.csh],
+-[[set current=`/bin/pwd`
++[[set current=`pwd`
+ set home=$current
+ mkdir a
+ echo ---
+@@ -402,7 +402,7 @@
+ [[Usage: dirs [-plvnSLc].
+ Usage: dirs [-plvnSLc].
+ ]])
+-AT_CHECK([echo x"`/bin/pwd`"x > /tmp/x && sed "s,`/bin/pwd`,CWD,g" < saved], ,
++AT_CHECK([echo x"`pwd`"x > /tmp/x && sed "s,`pwd`,CWD,g" < saved], ,
+ [cd CWD
+ pushd CWD/a
+ ])
+@@ -1115,7 +1115,7 @@
+ AT_KEYWORDS([commands])
+ 
+ AT_DATA([popd.csh],
+-[[set current=`/bin/pwd`
++[[set current=`pwd`
+ set home=$current
+ pushd /
+ popd
+@@ -1134,7 +1134,7 @@
+ (popd - foo)
+ :
+ ]])
+-AT_CHECK([tcsh -f popd.csh | sed "s,`/bin/pwd`,CWD,"], ,
++AT_CHECK([tcsh -f popd.csh | sed "s,`pwd`,CWD,"], ,
+ [/ ~ @&t@
+ ~ @&t@
+ / ~ @&t@
+@@ -1183,7 +1183,7 @@
+ AT_KEYWORDS([commands])
+ 
+ AT_DATA([pushd.csh],
+-[[set home=`/bin/pwd`
++[[set home=`pwd`
+ mkdir a
+ pushd /
+ pushd /dev
+@@ -1215,7 +1215,7 @@
+ (pushd - foo)
+ :
+ ]])
+-AT_CHECK([tcsh -f pushd.csh | sed "s,`/bin/pwd`,CWD,g"], ,
++AT_CHECK([tcsh -f pushd.csh | sed "s,`pwd`,CWD,g"], ,
+ [/ ~ @&t@
+ /dev / ~ @&t@
+ / /dev ~ @&t@
+@@ -1756,11 +1756,11 @@
+ chmod a+x ls-F
+ AT_DATA([where.csh],
+ [[alias ls-F foo bar
+-set path=(`/bin/pwd`)
++set path=(`pwd`)
+ where ls-F
+ where this_does_not_exist
+ ]])
+-AT_CHECK([tcsh -f where.csh | sed "s,`/bin/pwd`,CWD,"], ,
++AT_CHECK([tcsh -f where.csh | sed "s,`pwd`,CWD,"], ,
+ [ls-F is aliased to foo bar
+ ls-F is a shell built-in
+ CWD/ls-F
+@@ -1780,7 +1780,7 @@
+ chmod a+x my_command
+ AT_DATA([which.csh],
+ [[alias my_alias my alias
+-set path=(`/bin/pwd`)
++set path=(`pwd`)
+ which my_command
+ which my_alias
+ which echo
+@@ -1788,7 +1788,7 @@
+ alias echo echo_alias
+ which echo
+ ]])
+-AT_CHECK([tcsh -f which.csh | sed "s,`/bin/pwd`,CWD,"], ,
++AT_CHECK([tcsh -f which.csh | sed "s,`pwd`,CWD,"], ,
+ [CWD/my_command
+ my_alias: 	 aliased to my alias
+ echo: shell built-in command.
+--- a/tests/variables.at
++++ b/tests/variables.at
+@@ -895,10 +895,10 @@
+ sh -c 'echo 3 >&2'
+ set implicitcd
+ subdir
+-/bin/pwd
++pwd
+ ..
+ ~/subdir
+-/bin/pwd
++pwd
+ cd
+ set implicitcd=verbose
+ subdir
+@@ -907,7 +907,7 @@
+ ]])
+ (echo 1; echo 'subdir: Command not found.';
+  echo 2; echo "$PWD/subdir: Permission denied."; echo 3) > experr
+-AT_CHECK([tcsh -f -i -q < implicitcd.csh | sed "s,`/bin/pwd`,CWD,"], ,
++AT_CHECK([tcsh -f -i -q < implicitcd.csh | sed "s,`pwd`,CWD,"], ,
+ [> 0
+ CWD/subdir
+ CWD/subdir

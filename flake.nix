@@ -46,7 +46,7 @@
       tcshBase = pkgs:
         let p = pkgs.pkgsStatic;
         in (p.tcsh.override { ncurses = p.ncurses; }).overrideAttrs (o: {
-          patches = (o.patches or [ ]) ++ [ ./musl-catgets-guard.patch ];
+          patches = (o.patches or [ ]) ++ [ ./musl-catgets-guard.patch ./tests-pwd-from-path.patch ];
           # tcsh's Makefile bakes -D_PATH_TCSHELL='"${bindir}/tcsh"', i.e. our
           # own store path, and that is the default value of the `$shell`
           # variable -- the interpreter tcsh execs for a script with no `#!`.
@@ -58,10 +58,15 @@
             substituteInPlace Makefile.in \
               --replace-fail '${bakedShell}' '/bin/tcsh'
           '';
-          # Don't wire the native suite: tcsh's autotest harness regenerates
-          # itself with autom4te (autoconf) and expects a pty/expect environment,
-          # neither present in the static-musl build sandbox.
-          doCheck = false;
+          # The autotest suite regenerates itself with autom4te. filetest and
+          # "Primary expressions" are left out: they chmod a file setuid,
+          # which the build sandbox forbids.
+          doCheck = pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform;
+          nativeCheckInputs = (o.nativeCheckInputs or [ ]) ++ (with pkgs.buildPackages; [ autoconf perl getent ]);
+          checkFlags = (o.checkFlags or [ ]) ++ [ "ENVCMD=env" ];
+          preCheck = ''
+            checkFlagsArray+=("TESTSUITEFLAGS=-k !filetest,!Primary")
+          '';
         });
     in
     unpins-lib.lib.mkStandaloneFlake {
