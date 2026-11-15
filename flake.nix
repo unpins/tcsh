@@ -41,11 +41,8 @@
     let
       # Literal out here: inside an '' string the `${` would need escaping.
       bakedShell = "\${bindir}/tcsh";
-      # Fallback terminfo is baked centrally for every engine ncurses, linux +
-      # darwin (native-overlay/ncurses.nix), so p.ncurses already carries it.
       tcshBase = pkgs:
-        let p = pkgs.pkgsStatic;
-        in (p.tcsh.override { ncurses = p.ncurses; }).overrideAttrs (o: {
+        pkgs.pkgsStatic.tcsh.overrideAttrs (o: {
           patches = (o.patches or [ ]) ++ [ ./musl-catgets-guard.patch ./tests-pwd-from-path.patch ];
           # tcsh's Makefile bakes -D_PATH_TCSHELL='"${bindir}/tcsh"', i.e. our
           # own store path, and that is the default value of the `$shell`
