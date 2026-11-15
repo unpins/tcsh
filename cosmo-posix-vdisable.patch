@@ -1,0 +1,21 @@
+Cosmopolitan exposes _POSIX_VDISABLE as a runtime `extern const int` (its
+termios layer normalizes it across hosts), not a compile-time constant. tcsh
+seeds the file-scope `ttychars[]` array with it, which needs a constant
+expression ("unable to substitute constant"). Pin it to cosmo's runtime value
+(0, measured with a cosmocc probe) right after ed.init.c's includes, so the
+initializer is constant and the runtime remap that compares ttychars against
+_POSIX_VDISABLE still matches. Inert outside Cosmopolitan.
+
+--- a/ed.init.c
++++ b/ed.init.c
+@@ -33,6 +33,10 @@
+ #include "ed.h"
+ #include "tc.h"
+ #include "ed.defns.h"
++#ifdef __COSMOPOLITAN__
++# undef _POSIX_VDISABLE
++# define _POSIX_VDISABLE 0
++#endif
+ 
+ /* ed.init.c -- init routines for the line editor */
+ /* #define DEBUG_TTY */

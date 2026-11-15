@@ -39,22 +39,13 @@
   #     (needs fork/job-control/signals), cosmocc backs them.
   outputs = { self, unpins-lib }:
     let
-      # Literal out here: inside an '' string the `${` would need escaping.
-      bakedShell = "\${bindir}/tcsh";
       tcshBase = pkgs:
         pkgs.pkgsStatic.tcsh.overrideAttrs (o: {
-          patches = (o.patches or [ ]) ++ [ ./musl-catgets-guard.patch ./tests-pwd-from-path.patch ];
-          # tcsh's Makefile bakes -D_PATH_TCSHELL='"${bindir}/tcsh"', i.e. our
-          # own store path, and that is the default value of the `$shell`
-          # variable -- the interpreter tcsh execs for a script with no `#!`.
-          # The path exists nowhere on a user's machine, and Nix counted it as
-          # a runtime reference, dragging the base build behind a
-          # self-contained binary. /bin/tcsh is upstream's own Linux default
-          # (pathnames.h) and where every distro puts it.
-          postPatch = (o.postPatch or "") + ''
-            substituteInPlace Makefile.in \
-              --replace-fail '${bakedShell}' '/bin/tcsh'
-          '';
+          patches = (o.patches or [ ]) ++ [
+            ./musl-catgets-guard.patch
+            ./shell-path-bin-tcsh.patch
+            ./tests-pwd-from-path.patch
+          ];
           # The autotest suite regenerates itself with autom4te. filetest and
           # "Primary expressions" are left out: they chmod a file setuid,
           # which the build sandbox forbids.

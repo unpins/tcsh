@@ -13,46 +13,20 @@
 pkgs:
 let
   cosmoPkgs = unpins-lib.lib.cosmoStaticCross pkgs;
-  # Literal fora da string '': dentro dela o `${` teria de ser escapado.
-  bakedShell = "\${bindir}/tcsh";
 in
 cosmoPkgs.tcsh.overrideAttrs (oa: {
-  patches = (oa.patches or [ ]) ++ [ ./musl-catgets-guard.patch ];
-
-  # Cosmopolitan exposes _POSIX_VDISABLE as a runtime `extern const int` (its
-  # termios layer normalizes it across hosts), NOT a compile-time constant. But
-  # tcsh seeds the file-scope `ttychars[]` array with it (ed.init.c ~l.69-73),
-  # which requires a constant expression → "error: unable to substitute
-  # constant". Pin it to cosmo's actual runtime value (verified 0 via a cosmocc
-  # probe) right after ed.init.c's includes, so the static initializer is
-  # constant AND the runtime remap logic (ed.init.c l.158-162, comparing
-  # ttychars against _POSIX_VDISABLE) still matches. Same shape as zsh's
-  # RLIM_NLIMITS pin.
-  postPatch = (oa.postPatch or "") + ''
-    # Same as the native build: tcsh's Makefile bakes _PATH_TCSHELL from
-    # bindir, i.e. our own store path, as the default `$shell`. Point it at
-    # the conventional location instead so the .exe carries no store
-    # reference. See flake.nix for the full reasoning.
-    substituteInPlace Makefile.in \
-      --replace-fail '${bakedShell}' '/bin/tcsh'
-
-    substituteInPlace ed.init.c \
-      --replace '#include "ed.defns.h"' \
-                '#include "ed.defns.h"
-#ifdef __COSMOPOLITAN__
-# undef _POSIX_VDISABLE
-# define _POSIX_VDISABLE 0
-#endif'
-
-    # Windows command lookup: catalog programs install as `<name>.exe` hardlinks
-    # (cmd.exe/PowerShell find them via PATHEXT), but Cosmopolitan does not append
-    # an executable suffix during path resolution, so a bare `ls` typed at the
-    # tcsh prompt never resolves. The patch teaches tcsh's exec chokepoint (texec)
-    # to retry with `.exe` when the bare candidate fails ENOENT — mirroring native
-    # Windows shells and keeping a single on-disk name (no `ls` + `ls.exe` pair).
-    # `__COSMOCC__`-guarded, inert on the Linux/macOS static builds.
-    patch -p1 < ${./findcmd-exe-lookup.patch}
-  '';
+  # findcmd-exe-lookup.patch: catalog programs install as `<name>.exe`
+  # (cmd.exe/PowerShell find them via PATHEXT), but Cosmopolitan appends no
+  # suffix during path resolution, so a bare `ls` typed at the tcsh prompt
+  # never resolves. The patch teaches tcsh's exec chokepoint (texec) to retry
+  # with `.exe` when the bare candidate fails ENOENT, as native Windows shells
+  # do, keeping a single on-disk name. `__COSMOCC__`-guarded.
+  patches = (oa.patches or [ ]) ++ [
+    ./musl-catgets-guard.patch
+    ./shell-path-bin-tcsh.patch
+    ./cosmo-posix-vdisable.patch
+    ./findcmd-exe-lookup.patch
+  ];
 
   # cosmo ships <shadow.h> but not the getspnam() symbol, so configure sets
   # HAVE_SHADOW_H and tcsh's screen-`lock` auth path (tc.func.c auto_lock) pulls

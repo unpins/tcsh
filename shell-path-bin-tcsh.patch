@@ -1,0 +1,17 @@
+tcsh's Makefile bakes -D_PATH_TCSHELL='"${bindir}/tcsh"', i.e. the build's own
+store path, and that is the default value of `$shell` -- the interpreter tcsh
+execs for a script with no `#!`. That path exists on no user's machine, and Nix
+counted it as a runtime reference. /bin/tcsh is upstream's own Linux default
+(pathnames.h) and where every distro puts it.
+
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -237,7 +237,7 @@
+ #DFLAGS=
+ #DFLAGS=-D_PATH_TCSHELL='"${DESTBIN}/tcsh"'
+ ## The following is set by autoconf.
+-DFLAGS = -D_PATH_TCSHELL='"${bindir}/tcsh"' @DFLAGS@ @CPPFLAGS@
++DFLAGS = -D_PATH_TCSHELL='"/bin/tcsh"' @DFLAGS@ @CPPFLAGS@
+ 
+ ################################################################
+ ## LDFLAGS.  Define something here if you need to
