@@ -66,7 +66,8 @@
       multicall = {
         programs = [{ name = "tcsh"; }];
       };
-      license = "BSD-2-Clause";
+      # nixpkgs says bsd2; tcsh's Copyright file has the three-clause text.
+      license = "BSD-3-Clause";
 
       # tcsh has --version; also exercise the interpreter to confirm argv
       # parsing and the builtin echo on every ABI (incl. the cosmo PE).
