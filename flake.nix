@@ -51,8 +51,17 @@
           doCheck = pkgs.stdenv.buildPlatform.canExecute pkgs.stdenv.hostPlatform;
           nativeCheckInputs = (o.nativeCheckInputs or [ ]) ++ (with pkgs.buildPackages; [ autoconf perl getent ]);
           checkFlags = (o.checkFlags or [ ]) ++ [ "ENVCMD=env" ];
+          # On darwin three tests read the home directory with dscl, which the
+          # sandbox lacks; this one answers from the same passwd entry tcsh sees.
           preCheck = ''
             checkFlagsArray+=("TESTSUITEFLAGS=-k !filetest,!Primary")
+          '' + pkgs.lib.optionalString pkgs.stdenv.buildPlatform.isDarwin ''
+            mkdir -p "$TMPDIR/dscl-shim"
+            printf '%s\n' '#!${pkgs.buildPackages.runtimeShell}' \
+              'echo "NFSHomeDirectory: $(getent passwd "$(id -u)" | cut -d: -f6)"' \
+              > "$TMPDIR/dscl-shim/dscl"
+            chmod +x "$TMPDIR/dscl-shim/dscl"
+            export PATH="$TMPDIR/dscl-shim:$PATH"
           '';
         });
     in
